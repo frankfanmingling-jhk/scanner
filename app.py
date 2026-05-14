@@ -4,76 +4,36 @@ import requests
 
 app = Flask(__name__)
 
-URL = "https://ecampus.hmtm.de/campus/all/roomGroupsDay.asp?RWO_BUILDING=Standort+Luisenstra%C3%9Fe&from=publicrooms"
+URL = "https://ecampus.hmtm.de/campus/all/roomGroupsDay.asp?room=L%20018&oid=341&gguid=0xCD7890D53F0B4C4BAF813E12FB1A8DA6&mode=all&from=&tguid=0xAF6933CCA3E6504089248488B6F1AC0D"
 
 @app.route("/")
 def home():
 
-    response = requests.get(URL, timeout=60)
+    response = requests.get(
+        URL,
+        timeout=60
+    )
 
-    html = response.text
-
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
+    )
 
     tables = soup.find_all("table")
 
-    timetable = tables[2]
+    result = []
 
-    rows = timetable.find_all("tr")
+    for i, table in enumerate(tables):
 
-    # 第二行是房间名
-    header_cells = rows[1].find_all(["td", "th"])
+        rows = table.find_all("tr")
 
-    room_names = []
-
-    for cell in header_cells[1:]:
-        room_names.append(
-            cell.get_text(strip=True)
-        )
-
-    target_row = None
-
-    # 找11点这一行
-    for row in rows:
-
-        cols = row.find_all("td")
-
-        if not cols:
-            continue
-
-        first = cols[0].get_text(strip=True)
-
-        if first.startswith("11:00"):
-            target_row = cols
-            break
-
-    if not target_row:
-        return {
-            "success": False,
-            "error": "11:00 row not found"
-        }
-
-    free_rooms = []
-
-    for i, cell in enumerate(target_row[1:]):
-
-        text = cell.get_text(strip=True)
-
-        # 空字符串 = 空闲
-        if text == "":
-
-            if i < len(room_names):
-
-                room = room_names[i]
-
-                # 只保留L楼琴房
-                if room.startswith("L"):
-
-                    free_rooms.append(room)
+        result.append({
+            "table": i,
+            "rows": len(rows),
+            "preview": table.get_text(strip=True)[:500]
+        })
 
     return {
         "success": True,
-        "time": "11:00",
-        "free_rooms_count": len(free_rooms),
-        "free_rooms": free_rooms
+        "tables": result
     }
