@@ -21,19 +21,36 @@ def home():
 
     tables = soup.find_all("table")
 
+    timetable = tables[2]
+
+    rows = timetable.find_all("tr")
+
     result = []
 
-    for i, table in enumerate(tables):
+    for row in rows:
 
-        rows = table.find_all("tr")
+        cols = row.find_all("td")
+
+        if len(cols) < 2:
+            continue
+
+        time_text = cols[0].get_text(strip=True)
+
+        status_text = cols[1].get_text(strip=True)
+
+        if status_text == "":
+            status = "FREE"
+        else:
+            status = "BUSY"
 
         result.append({
-            "table": i,
-            "rows": len(rows),
-            "preview": table.get_text(strip=True)[:500]
+            "time": time_text,
+            "status": status,
+            "detail": status_text
         })
 
     return {
         "success": True,
-        "tables": result
+        "room": "L018",
+        "schedule": result
     }
