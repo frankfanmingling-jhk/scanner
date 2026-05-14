@@ -9,32 +9,73 @@ URL = "https://ecampus.hmtm.de/campus/all/roomGroupsDay.asp?RWO_BUILDING=Standor
 @app.route("/")
 def home():
 
-    response = requests.get(
-        URL,
-        timeout=60
-    )
+    response = requests.get(URL, timeout=60)
 
     html = response.text
 
     soup = BeautifulSoup(html, "html.parser")
 
-    title = soup.title.text if soup.title else "No title"
-
     tables = soup.find_all("table")
 
-    result = []
+    if len(tables) < 2:
+        return {
+            "success": False,
+            "error": "No timetable found"
+        }
 
-    for table in tables[:5]:
+    timetable = tables[1]
 
-        rows = table.find_all("tr")
+    rows = timetable.find_all("tr")
 
-        for row in rows[:10]:
+    if len(rows) < 3:
+        return {
+            "success": False,
+            "error": "No rows found"
+        }
 
-            cols = row.find_all(["td", "th"])
+    headers = rows[1].find_all(["td", "th"])
 
-            texts = [c.get_text(strip=True) for c in cols]
+    room_names = []
 
-            if texts:
+    for h in headers[1:]:
+        room_names.append(h.get_text(strip=True))
+
+    free_rooms = []
+
+    target_row = None
+
+    for row in rows:
+
+        cols = row.find_all("td")
+
+        if not cols:
+            continue
+
+        time_text = cols[0].get_text(strip=True)
+
+        if "11:00" in time_text:
+            target_row = cols
+            break
+
+    if not target_row:
+        return {
+            "success": False,
+            "error": "Time row not found"
+        }
+
+    for i, cell in enumerate(target_row[1:]):
+
+        text = cell.get_text(strip=True)
+
+        if text == "":
+            free_rooms.append(room_names[i])
+
+    return {
+        "success": True,
+        "time": "11:00",
+        "free_rooms_count": len(free_rooms),
+        "free_rooms": free_rooms[:100]
+    }            if texts:
                 result.append(texts)
 
     return {
